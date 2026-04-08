@@ -1,0 +1,808 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* RESET */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: #0f0f0f;
+            overflow-x: hidden;
+        }
+
+        /* 🔥 WORD 'GALLERY' FIXED DEAD CENTER */
+        .gallery-section {
+            position: relative;
+            min-height: 120vh;
+        }
+
+        .gallery-title {
+            position: fixed;
+
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10vw;
+            /* Scales nicely with screen size */
+            font-weight: 700;
+            letter-spacing: 12px;
+            color: white;
+            z-index: 999;
+            pointer-events: none;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 🔥 NEW WRAPPER FOR 3D SCROLLING */
+        .perspective-container {
+            perspective: 2000px;
+            width: 100%;
+            min-height: 100vh;
+            padding: 50px 0;
+        }
+
+        /* 4-COLUMN GRID (Top to Bottom) */
+        .grid {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            /* ✅ Exactly 4 columns */
+            grid-auto-rows: 200px;
+            gap: 15px;
+            padding: 20px;
+            grid-auto-flow: dense;
+        }
+
+        /* IMAGE BOXES */
+        .img-box {
+            overflow: hidden;
+            border-radius: 16px;
+            transform-style: preserve-3d;
+            transition: transform .2s ease-out, box-shadow .3s ease;
+            cursor: pointer;
+            z-index: 1;
+            background: #222;
+        }
+
+        .img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .img-box:hover {
+            z-index: 10;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        /* SIZES */
+        .wide {
+            grid-column: span 2;
+        }
+
+        .tall {
+            grid-row: span 2;
+        }
+
+        .big {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        /* 🔥 POPUP / LIGHTBOX STYLES */
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 99999;
+            /* Ensures it sits over absolutely everything */
+        }
+
+        .popup img {
+            max-width: 85%;
+            max-height: 85vh;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 1);
+            object-fit: contain;
+        }
+
+        .popup.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .close {
+            position: absolute;
+            top: 30px;
+            right: 50px;
+            font-size: 45px;
+            color: white;
+            cursor: pointer;
+            z-index: 100000;
+        }
+
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 60px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            padding: 20px;
+            transition: .2s;
+            z-index: 100000;
+        }
+
+        .arrow:hover {
+            transform: translateY(-50%) scale(1.1);
+            color: #ccc;
+        }
+
+        .left {
+            left: 30px;
+        }
+
+        .right {
+            right: 30px;
+        }
+
+        /* Mobile adjustment */
+        @media (max-width: 800px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+
+        /* NAVBAR */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: clamp(12px, 1.5vh, 24px) clamp(24px, 4vw, 80px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: transparent;
+        }
+
+        nav ul {
+            display: flex;
+            gap: clamp(16px, 2.5vw, 48px);
+            list-style: none;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: clamp(10px, 0.85vw, 15px);
+        }
+
+        /* LOGO */
+        .nav-logo img {
+            height: clamp(32px, 3.5vh, 56px);
+            width: auto;
+            object-fit: contain;
+            transition: 0.3s;
+        }
+
+        .nav-logo img:hover {
+            transform: scale(1.05);
+        }
+
+        /* HAMBURGER */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .hamburger span {
+            width: 26px;
+            height: 2px;
+            background: white;
+            display: block;
+            transition: 0.3s;
+        }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+
+            nav {
+                padding: 16px 20px;
+            }
+
+            .hamburger {
+                display: flex;
+                z-index: 2001;
+            }
+
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+
+                background: rgba(0, 0, 0, 0.35);
+                backdrop-filter: blur(14px);
+
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 30px;
+
+                transform: translateY(-100%);
+                transition: 0.5s ease;
+
+                z-index: 2000;
+            }
+
+            .nav-menu.active {
+                transform: translateY(0);
+            }
+
+            .nav-menu li a {
+                font-size: 22px;
+                letter-spacing: 2px;
+            }
+        }
+
+        /* FOOTER */
+        footer {
+            background-color: #0b0b0b;
+            color: white;
+            padding: 60px 8%;
+            min-height: 30vh;
+        }
+
+        .footer-grid {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            padding-bottom: 40px;
+        }
+
+        .footer-col {
+            flex: 1;
+            min-width: 180px;
+            padding: 15px 40px;
+            border-right: 2px solid #fff;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .footer-col:first-child {
+            padding-left: 0;
+            flex: 1.5;
+        }
+
+        .footer-col:nth-child(1),
+        .footer-col:nth-child(2),
+        .footer-col:nth-child(4),
+        .footer-col:nth-child(5) {
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .footer-col:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+
+        /* TEXT */
+        .footer-bold {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            line-height: 1.6;
+            margin-top: 10px;
+            white-space: nowrap;
+        }
+
+        /* CONTACT */
+        .footer-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+            margin-bottom: 10px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .footer-contact-item i {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* LOGO */
+        .footer-logo {
+            width: 150px;
+            filter: brightness(0) invert(1);
+        }
+
+        .footer-tagline {
+            font-size: 9px;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+
+        /* SUBSCRIBE */
+        .footer-subscribe h5,
+        .footer-social h5 {
+            font-size: 11px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .footer-social h5 {
+            font-size: 13px;
+        }
+
+        .subscribe-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .subscribe-form input {
+            background: transparent;
+            border: 1px solid #fff;
+            padding: 8px 12px;
+            color: white;
+            font-size: 11px;
+            border-radius: 4px;
+        }
+
+        .subscribe-form button {
+            background: transparent;
+            border: 1px solid #fff;
+            padding: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: 0.3s;
+        }
+
+        .subscribe-form button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .subscribe-note {
+            font-size: 8px;
+            margin-top: 5px;
+            white-space: nowrap;
+        }
+
+        /* SOCIAL */
+        .footer-social-icons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .footer-social-icons a {
+            width: 36px;
+            height: 36px;
+            box-shadow: 0 0 0 1.5px #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .footer-social-icons a:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* BOTTOM */
+        .footer-bottom {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .footer-bottom a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+        }
+
+        .footer-bottom a:hover {
+            color: #fff;
+        }
+
+        .highlight {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+
+            .footer-grid {
+                flex-direction: column;
+            }
+
+            .footer-col {
+                border-right: none;
+                padding: 20px 0;
+                align-items: center !important;
+                text-align: center !important;
+            }
+
+            .footer-text,
+            .subscribe-note {
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+
+        <div class="nav-logo">
+            <a href="https://vatsalvarma.github.io/GREENSIRI---prbxxxx/">
+                <img
+                    src="https://raw.githubusercontent.com/vatsalvarma/Client-Project-/refs/heads/main/Asset%2011X.png">
+            </a>
+        </div>
+
+        <!-- HAMBURGER -->
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <!-- MENU -->
+        <ul class="nav-menu">
+            <li><a href="https://vatsalvarma.github.io/GREENSIRI---prbxxxx/" onclick="closeMenu()">HOME</a></li>
+            <li><a href="https://vatsalvarma.github.io/TarniFarms/" onclick="closeMenu()">FARMS</a></li>
+            <li><a href="https://vatsalvarma.github.io/Greensiri-Residential-Coming-soon/"
+                    onclick="closeMenu()">RESIDENTIALS</a></li>
+            <li><a href="https://vatsalvarma.github.io/Greensiri-Villa-ComingSoon-page/"
+                    onclick="closeMenu()">VILLAS</a></li>
+            <li><a href="#">SHOT AT SITE</a></li>
+            <li><a href="https://vatsalvarma.github.io/About-Greensiri-page/">COMPANY</a></li>
+            <li><a href="https://vatsalvarma.github.io/Greensiri-blogs-/">BLOGS</a></li>
+            <li><a href="https://vatsalvarma.github.io/Greensiri-Contact/">CONTACT</a></li>
+        </ul>
+
+    </nav>
+    <section class="gallery-section">
+
+        <h1 class="gallery-title"> FARM GALLERY</h1>
+
+        <div class="perspective-container">
+            <div class="grid" id="grid"></div>
+        </div>
+    </section>
+    <div class="popup" id="popup">
+        <span class="close" id="closeBtn">✕</span>
+        <div class="arrow left" id="prev">&#10094;</div>
+        <img id="popupImg">
+        <div class="arrow right" id="next">&#10095;</div>
+    </div>
+
+    <footer>
+        <div class="footer-grid">
+
+            <!-- ADDRESS -->
+            <div class="footer-col">
+                <span class="footer-bold">GREENSIRI INFRA LLP</span>
+                <p class="footer-text">
+                    130/2, 3RD FLOOR, OMKARA BUILDING,<br>
+                    INTERNATIONAL AIRPORT ROAD, NEHRU NAGAR,<br>
+                    YELAHANKA, BENGALURU - 64
+                </p>
+            </div>
+
+            <!-- CONTACT -->
+            <div class="footer-col">
+                <a href="tel:+919511125552" class="footer-contact-item">
+                    <i class="fa-solid fa-phone"></i>
+                    +91 95111 25552
+                </a>
+
+                <a href="mailto:contact@greensiri.in" class="footer-contact-item">
+                    <i class="fa-regular fa-envelope"></i>
+                    contact@greensiri.in
+                </a>
+            </div>
+
+            <!-- LOGO -->
+            <div class="footer-col">
+                <img src="https://raw.githubusercontent.com/vatsalvarma/Client-Project-/refs/heads/main/Asset%2011X.png"
+                    class="footer-logo">
+                <p class="footer-tagline"></p>
+            </div>
+
+            <!-- SUBSCRIBE -->
+            <div class="footer-col footer-subscribe">
+                <h5>DO YOU HAVE ANY QUERY?</h5>
+
+                <form class="subscribe-form">
+                    <input type="email" placeholder="example@email.com" required>
+                    <button type="submit">SUBSCRIBE</button>
+                </form>
+
+                <div class="subscribe-note">
+                    PLEASE FEEL FREE TO SHARE ANY QUERIES YOU HAVE
+                </div>
+            </div>
+
+            <!-- SOCIAL -->
+            <div class="footer-col footer-social">
+                <h5>SOCIAL MEDIA LINKS</h5>
+
+                <div class="footer-social-icons">
+                    <a href="https://www.facebook.com/greensiriproperties" target="_blank"><i
+                            class="fa-brands fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/greensiri_properties" target="_blank"><i
+                            class="fa-brands fa-instagram"></i></a>
+                    <a href="https://www.youtube.com/@Greensiri" target="_blank"><i
+                            class="fa-brands fa-youtube"></i></a>
+                    <a href="https://in.pinterest.com/greensiriproperties" target="_blank"><i
+                            class="fa-brands fa-pinterest-p"></i></a>
+                    <a href="https://www.linkedin.com/company/greensiri-infra-llp/posts/?feedView=all"
+                        target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="https://wa.me/919511125552?text=" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTTOM -->
+        <div class="footer-bottom">
+            <p>
+                &copy; Copyright 2026
+                <span class="highlight">GREENSIRI PROPERTIES</span>.
+                All Rights Reserved |
+                Website Design by
+                <span class="highlight">PRIZMABRIXX</span>
+            </p>
+        </div>
+    </footer>
+
+
+
+    <script>
+        /* 🔥 YOUR IMAGES */
+        const verticalImages = [
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Vt1.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Vt2.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Vt3.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Vt4.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Vt5.jpg"
+        ];
+
+        const horizontalImages = [
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_120726608_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_120738208_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_120805334_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_121136433_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_121712134_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_121832079_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_122214090_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_122220893_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_122224932_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_132343792_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_133722810_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_133943432_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250314_135418988_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/20250320_024041969_iOS.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20240924214831_0003_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20240924214920_0007_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250314162454_0289_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250314165541_0332_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250314171414_0363_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250529110114_0577_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250529113937_0633_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20250529114358_0644_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/DJI_20260316091107_0227_D.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Greensiri%20(1).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Greensiri%20(2).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_0023.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_0449.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_0453.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_0529.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_0545.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0053.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0122.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0123.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0127.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0128.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0145.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0149.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0182.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0198.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0206.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0216.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0238.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0252.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0311.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0375.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/IMG_E0568.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/T1.jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(1).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(2).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(3).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(4).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(6).jpg",
+            "https://raw.githubusercontent.com/KuruvaVamshi/Greensiri-gallery-farm/refs/heads/main/Tarini%20(7).jpg"
+        ];
+
+        const grid = document.getElementById("grid");
+
+        /* 🔥 MERGE - FIXED ORDER (NO SHUFFLE) */
+        let mixed = [];
+        verticalImages.forEach(src => { mixed.push({ src: src, type: "vertical" }); });
+        horizontalImages.forEach(src => { mixed.push({ src: src, type: "horizontal" }); });
+        /* Removed: mixed.sort(() => Math.random() - 0.5); */
+
+        /* 🔥 LIGHTBOX SETUP */
+        const popup = document.getElementById("popup");
+        const popupImg = document.getElementById("popupImg");
+        const closeBtn = document.getElementById("closeBtn");
+        const prev = document.getElementById("prev");
+        const next = document.getElementById("next");
+
+        let currentIndex = 0;
+        let isPopupActive = false;
+
+        /* 🔥 CREATE GRID & CLICK EVENT */
+        mixed.forEach((item, index) => {
+            const box = document.createElement("div");
+            box.classList.add("img-box");
+
+            if (item.type === "vertical") {
+                box.classList.add("tall");
+            } else {
+                const r = Math.random();
+                if (r > 0.8) box.classList.add("big");
+                else if (r > 0.5) box.classList.add("wide");
+            }
+
+            const img = document.createElement("img");
+            img.src = item.src;
+            // Add a lazy loading tag for better performance
+            img.loading = "lazy";
+
+            box.appendChild(img);
+            grid.appendChild(box);
+
+            /* ✅ THE CLICK EVENT - Isolated and clean */
+            box.addEventListener("click", () => {
+                isPopupActive = true;
+                currentIndex = index;
+                popup.classList.add("active");
+                popupImg.src = mixed[currentIndex].src;
+            });
+        });
+
+        /* 🔥 LIGHTBOX CONTROLS */
+        function closePopup() {
+            popup.classList.remove("active");
+            isPopupActive = false;
+        }
+
+        closeBtn.addEventListener("click", closePopup);
+
+        next.addEventListener("click", () => {
+            currentIndex++;
+            if (currentIndex >= mixed.length) { currentIndex = 0; }
+            popupImg.src = mixed[currentIndex].src;
+        });
+
+        prev.addEventListener("click", () => {
+            currentIndex--;
+            if (currentIndex < 0) { currentIndex = mixed.length - 1; }
+            popupImg.src = mixed[currentIndex].src;
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") { closePopup(); }
+            if (e.key === "ArrowRight") { document.getElementById("next").click(); }
+            if (e.key === "ArrowLeft") { document.getElementById("prev").click(); }
+        });
+
+        popup.addEventListener("click", (e) => {
+            if (e.target !== popupImg && !e.target.classList.contains("arrow") && !e.target.classList.contains("close")) {
+                closePopup();
+            }
+        });
+
+        /* 🔥 3D MOUSE EFFECT (Title is now ignored so it stays fixed) */
+        document.addEventListener("mousemove", e => {
+            if (isPopupActive) return; // Stop movement behind the popup
+
+            const boxes = document.querySelectorAll(".img-box");
+            const x = (e.clientX - window.innerWidth / 2) / window.innerWidth;
+            const y = (e.clientY - window.innerHeight / 2) / window.innerHeight;
+
+            boxes.forEach((box, i) => {
+                const moveX = x * (20 + (i % 3) * 10);
+                const moveY = y * (20 + (i % 3) * 10);
+
+                box.style.transform = `
+                    translateX(${moveX}px)
+                    translateY(${moveY}px)
+                    rotateY(${x * 10}deg)
+                    rotateX(${-y * 10}deg)
+                `;
+            });
+        });
+        function toggleMenu() {
+            document.querySelector(".nav-menu").classList.toggle("active");
+        }
+
+        function closeMenu() {
+            document.querySelector(".nav-menu").classList.remove("active");
+        }
+        const title = document.querySelector(".gallery-title");
+        const footer = document.querySelector("footer");
+
+        window.addEventListener("scroll", () => {
+            const footerTop = footer.getBoundingClientRect().top;
+            const screenHeight = window.innerHeight;
+
+            if (footerTop < screenHeight) {
+                title.style.opacity = "0";   // hide near footer
+            } else {
+                title.style.opacity = "1";   // show normally
+            }
+        });
+    </script>
+</body>
+
+</html>
